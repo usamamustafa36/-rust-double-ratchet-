@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+
+# Virtual envs
+.venv/
+venv/
+env/
+ENV/
+
+# Environments / secrets
+.env
+.env.*
+*.pem
+*.key
+secrets.json
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs / caches
+*.log
+.cache/
+
+# Models / large artifacts
+*.h5
+*.pkl
+*.pt
+*.pth
+*.ckpt
+
+# Node (for FHE/blockchain repo)
+node_modules/
+
+# Coverage / tests
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Tool-internal
+.claude/
+target/
