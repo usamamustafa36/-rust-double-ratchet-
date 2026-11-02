@@ -1,30 +1,32 @@
-# Rust Double Ratchet — N-Round Communication Demo
+# Rust Double Ratchet
 
 **Author:** Usama Mustafa
 **Domain:** Applied cryptography · End-to-end messaging · Signal protocol
-**Stack:** Rust · X25519 · ChaCha20-Poly1305 · HKDF-SHA256 · HMAC-SHA256
+**Stack:** Rust · X25519 · ChaCha20-Poly1305 · HKDF-SHA256
 
-A from-scratch Rust implementation of the Double Ratchet algorithm — the symmetric ratchet from Signal's end-to-end-encrypted messaging — with a runnable N-round Alice ↔ Bob communication demo.
+A Rust implementation of the Double Ratchet algorithm from Signal's end-to-end encrypted messaging, with a runnable N-round Alice ↔ Bob demo.
 
 ---
 
 ## What is Double Ratchet
 
-The Double Ratchet is the symmetric portion of Signal's E2EE protocol. It combines:
-- A **DH ratchet** that re-derives a shared secret on every message round trip
-- A **symmetric-key chain** that derives unique forward-secret keys for each individual message
+The Double Ratchet is the message-encryption layer of the Signal protocol. It combines two ratchets:
+- A **DH ratchet** that mixes a fresh X25519 output into the root key each time the conversation changes direction
+- A **symmetric-key chain** that derives a new key for every message
 
-The result: every message has its own key, future messages stay secret if past keys leak (forward secrecy), and past messages stay secret if future keys leak (post-compromise / break-in recovery).
+Every message gets its own key. Old messages stay secret if current keys leak (forward secrecy), and the session recovers its secrecy after a compromise once new DH values are exchanged (post-compromise security).
 
 ## What's implemented
 
-- X25519 static + ephemeral keys via `x25519-dalek`
-- HKDF-SHA256 root-key derivation via `hkdf` + `sha2`
-- HMAC-SHA256 chain-key derivation via `hmac`
-- ChaCha20-Poly1305 authenticated encryption via `chacha20poly1305`
-- N-round Alice ↔ Bob exchange showing rotating root, send chain, and receive chain
-- Stable role assignment via static-key ordering
-- Hex-encoded key + ciphertext printing for verification
+- DH ratchet on each direction change, with X25519 via `x25519-dalek`
+- Root and chain key derivation with HKDF-SHA256
+- ChaCha20-Poly1305 encryption, with the 48-byte header authenticated as associated data
+- Out-of-order delivery through stored skipped keys, capped at 1,000 per gap
+- Forged messages leave the session state unchanged, because decryption runs on a scratch copy
+- Superseded chain keys are zeroized
+- Tests for all of the above: `cargo test`
+
+Header encryption is not implemented, so header fields are authenticated but readable on the wire.
 
 ## Run
 
@@ -32,28 +34,18 @@ The result: every message has its own key, future messages stay secret if past k
 cargo run
 ```
 
-Output shows each round's:
-- Updated root key (after DH ratchet)
-- Send / receive chain keys (after symmetric ratchet)
-- Plaintext, ciphertext, and successful decryption
+The demo runs ten round trips and prints each side's current ratchet public key, which changes as the DH ratchet advances.
 
-```
-=== Double Ratchet N-Round Communication Demo ===
-Initial root (hex): ...
-Alice public key (hex): ...
-Bob   public key (hex): ...
+Tests:
 
---- Round 1 ---
-Alice → Bob: "Hello Bob, round 1"
-Ciphertext (hex): ...
-Bob decrypted: "Hello Bob, round 1"
-...
+```bash
+cargo test
 ```
 
 ## Layout
 
 - `src/main.rs` — driver + N-round protocol loop
-- `src/double_ratchet.rs` — `RatchetState` struct, DH-ratchet, KDF chains, encrypt / decrypt
+- `src/double_ratchet.rs` — `RatchetState`, DH ratchet, KDF chains, encrypt / decrypt, tests
 - `Cargo.toml` — crate dependencies
 
 ## Why this exists
@@ -62,9 +54,8 @@ Signal-style ratcheting is widely cited but rarely implemented from scratch. Thi
 
 ## Future direction
 
-- Replace X25519 with **CRYSTALS-Kyber** (ML-KEM) for a PQC-hardened ratchet
-- Add **out-of-order / skipped-message handling** (full Signal-spec compatibility)
-- Add **header encryption** layer
+- Replace X25519 with **ML-KEM** for a post-quantum ratchet
+- Add a **header encryption** layer
 
 ## License
 
